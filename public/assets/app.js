@@ -1,171 +1,171 @@
-// public/assets/app.js
+/* public/assets/app.js */
 
-const BASE = (window.APP_BASE || "").replace(/\/+$/, "");
-const urlJoin = (path) => `${BASE}/${path}`.replace(/\/{2,}/g, "/");
+const BASE = (window.APP_BASE || "").replace(/\/$/, "");
 
-async function apiGet(url) {
-  const res = await fetch(urlJoin(url), { headers: { Accept: "application/json" }, cache: "no-store" });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw { status: res.status, data, url: urlJoin(url) };
-  return data;
+function urlJoin(path) {
+    return (BASE + path).replace(/([^:]\/)\/+/g, "$1");
 }
 
-async function apiPost(url, body) {
-  const res = await fetch(urlJoin(url), {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw { status: res.status, data, url: urlJoin(url) };
-  return data;
+async function fetchTicket() {
+    const code = document.getElementById("app").dataset.code;
+    const res = await fetch(urlJoin(`/api/ticket.php?code=${code}`));
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw { status: res.status, data };
+    }
+    return res.json();
 }
 
-function el(tag, attrs = {}, children = []) {
-  const node = document.createElement(tag);
-  Object.entries(attrs).forEach(([k, v]) => {
-    if (k === "class") node.className = v;
-    else if (k === "text") node.textContent = v;
-    else if (k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2), v);
-    else node.setAttribute(k, v);
-  });
-  children.forEach((c) => node.appendChild(typeof c === "string" ? document.createTextNode(c) : c));
-  return node;
+async function assignTable(tableId) {
+    const code = document.getElementById("app").dataset.code;
+    const res = await fetch(urlJoin("/api/assign.php"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, table_id: tableId }),
+    });
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Failed to assign table");
+        return;
+    }
+    load(); // Reload
 }
 
-function renderError(container, message) {
-  container.innerHTML = "";
-  container.appendChild(
-    el("div", { class: "card danger" }, [
-      el("h2", {}, ["Error"]),
-      el("p", {}, [message]),
-      el("a", { class: "link", href: "index.php" }, ["Go back"]),
-    ])
-  );
+async function releaseTable() {
+    const code = document.getElementById("app").dataset.code;
+    if (!confirm("Release current table?")) return;
+    const res = await fetch(urlJoin("/api/release.php"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+    });
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Failed to release table");
+        return;
+    }
+    load();
 }
 
-function showApiError(prefix, e) {
-  console.error(prefix, e);
-  alert(
-    `${prefix}\n\nStatus: ${e?.status ?? "?"}\nURL: ${e?.url ?? "?"}\nMessage: ${e?.data?.error ?? "No JSON error"}`
-  );
+function render(data) {
+    const app = document.getElementById("app");
+    app.innerHTML = "";
+
+    const ticket = data.ticket;
+    const tables = data.available_tables;
+
+    // 1. Ticket Info
+    const info = document.createElement("div");
+    info.className = "card";
+    let currentHtml = `<span class="muted">None</span>`;
+    if (ticket.current_table) {
+        currentHtml = `<strong>${ticket.current_table.label}</strong> (Capacity: ${ticket.current_table.capacity})`;
+    }
+
+    info.innerHTML = `
+    <div class="row space">
+        <div>
+            <h2>Reservation ${ticket.code}</h2>
+            <div class="kv">Current Table: ${currentHtml}</div>
+        </div>
+        ${ticket.current_table
+            ? `<button onclick="releaseTable()" class="danger">Release</button>`
+            : ""
+        }
+    </div>
+  `;
+    app.appendChild(info);
+
+    // 2. Map View
+    const mapTitle = document.createElement("h3");
+    mapTitle.textContent = "Floor Plan";
+    mapTitle.style.marginTop = "24px";
+    app.appendChild(mapTitle);
+
+    const mapContainer = document.createElement("div");
+    mapContainer.className = "map-container";
+
+    const img = document.createElement("img");
+    img.src = "public/assets/patro1.png";
+    img.alt = "Floor Plan";
+    mapContainer.appendChild(img);
+
+    tables.forEach((t) => {
+        // Determine status
+        const isCurrent = ticket.current_table && ticket.current_table.table_id === t.id;
+        const isFull = t.remaining < 1;
+
+        // Map Dot
+        const dot = document.createElement("div");
+        dot.className = `map-table ${isCurrent ? 'current' : ''} ${isFull && !isCurrent ? 'full' : ''}`;
+        dot.textContent = t.label;
+
+        dot.style.left = t.position_x + "%";
+        dot.style.top = t.position_y + "%";
+
+        if (isCurrent) {
+            dot.title = "Your Table";
+        } else if (isFull) {
+            dot.title = "Occupied";
+        } else {
+            dot.onclick = () => assignTable(t.id);
+            dot.title = `Select ${t.label} (Remaining: ${t.remaining})`;
+        }
+
+        mapContainer.appendChild(dot);
+    });
+    app.appendChild(mapContainer);
+
+    // 3. List view
+    const listTitle = document.createElement("h3");
+    listTitle.textContent = "Table List";
+    listTitle.style.marginTop = "24px";
+    app.appendChild(listTitle);
+
+    const grid = document.createElement("div");
+    grid.className = "grid";
+
+    tables.forEach((t) => {
+        const isCurrent = ticket.current_table && ticket.current_table.table_id === t.id;
+        const isFull = t.remaining < 1;
+
+        const item = document.createElement("div");
+        item.className = "card";
+        item.style.textAlign = "center";
+
+        // Visual cue for status
+        let statusHtml = "";
+        if (isCurrent) {
+            statusHtml = `<div style="color:var(--green); font-weight:bold;">Selected</div>`;
+        } else if (isFull) {
+            statusHtml = `<div style="color:var(--muted);">Full</div>`;
+        } else {
+            statusHtml = `<button onclick="assignTable(${t.id})">Select</button>`;
+        }
+
+        item.innerHTML = `
+        <div style="font-size: 24px; font-weight: bold; margin-bottom: 8px;">${t.label}</div>
+        <div class="muted" style="margin-bottom: 12px;">Free: ${t.remaining} / ${t.capacity}</div>
+        ${statusHtml}
+    `;
+        grid.appendChild(item);
+    });
+    app.appendChild(grid);
 }
 
 async function load() {
-  const app = document.getElementById("app");
-  const code = (app?.dataset?.code || "").trim().toUpperCase();
-
-  if (!/^[A-Z0-9]{8}$/.test(code)) {
-    renderError(app, "Invalid code format. It must be 8 letters/numbers.");
-    return;
-  }
-
-  async function refresh() {
-    const data = await apiGet(`api/ticket.php?code=${encodeURIComponent(code)}`);
-    const t = data.ticket;
-
-    app.innerHTML = "";
-
-    // Ticket info (no reservation details anymore)
-    app.appendChild(
-      el("div", { class: "card" }, [
-        el("h2", {}, ["Ticket"]),
-        el("p", { class: "muted" }, ["Ticket code: ", el("strong", {}, [t.code])]),
-      ])
-    );
-
-    // Current table
-    const current = t.current_table;
-    app.appendChild(
-      el("div", { class: "card" }, [
-        el("div", { class: "row space" }, [
-          el("div", {}, [
-            el("h2", {}, ["Your current table"]),
-            el("p", { class: "muted" }, [
-              current
-                ? `${current.label} (capacity ${current.capacity})`
-                : "No table selected yet.",
-            ]),
-          ]),
-          current
-            ? el(
-                "button",
-                {
-                  type: "button",
-                  class: "btn danger",
-                  onclick: async () => {
-                    try {
-                      await apiPost("api/release.php", { code });
-                      await refresh();
-                    } catch (e) {
-                      showApiError("Release failed", e);
-                    }
-                  },
-                },
-                ["Untick table"]
-              )
-            : el("span", { class: "muted" }, [""]),
-        ]),
-      ])
-    );
-
-    // Available tables
-    app.appendChild(el("h2", {}, ["Select a table"]));
-
-    const grid = el("div", { class: "grid" });
-
-    const tables = Array.isArray(data.available_tables) ? data.available_tables : [];
-    if (!tables.length) {
-      grid.appendChild(
-        el("div", { class: "card" }, [el("p", { class: "muted" }, ["No tables available right now."])])
-      );
-    } else {
-      tables.forEach((tb) => {
-        grid.appendChild(
-          el("div", { class: "card" }, [
-            el("h3", {}, [`Table ${tb.label}`]),
-            el("p", { class: "muted" }, [
-              `Capacity: ${tb.capacity}` + (tb.remaining != null ? ` • Remaining: ${tb.remaining}` : ""),
-            ]),
-            el(
-              "button",
-              {
-                type: "button",
-                class: "btn",
-                onclick: async () => {
-                  try {
-                    await apiPost("api/assign.php", { code, table_id: tb.id });
-                    await refresh();
-                  } catch (e) {
-                    if (e?.status === 409) {
-                      alert("That table is full or was just taken. Pick another.");
-                      try { await refresh(); } catch (_) {}
-                      return;
-                    }
-                    showApiError("Assign failed", e);
-                  }
-                },
-              },
-              ["Select table"]
-            ),
-          ])
-        );
-      });
+    const app = document.getElementById("app");
+    try {
+        const data = await fetchTicket();
+        render(data);
+    } catch (e) {
+        app.innerHTML = `<div class="card" style="color:red">
+       <h3>Error loading ticket</h3>
+       <p>${e.data?.error || e.message || "Unknown error"}</p>
+    </div>`;
     }
-
-    app.appendChild(grid);
-  }
-
-  try {
-    await refresh();
-  } catch (e) {
-    console.error("LOAD FAILED", e);
-    renderError(
-      app,
-      `Could not load ticket. Status: ${e?.status ?? "?"} URL: ${e?.url ?? "?"} Message: ${e?.data?.error ?? "No JSON"}`
-    );
-  }
 }
 
 window.addEventListener("DOMContentLoaded", load);
+window.assignTable = assignTable;
+window.releaseTable = releaseTable;

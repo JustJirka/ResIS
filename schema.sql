@@ -25,6 +25,8 @@ CREATE TABLE tickets (
 CREATE TABLE tables (
   id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   label VARCHAR(50) NOT NULL,
+  position_x FLOAT NOT NULL,
+  position_y FLOAT NOT NULL,
   capacity INT NOT NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1
 );

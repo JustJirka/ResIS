@@ -27,7 +27,7 @@ $stmt = $pdo->prepare("
   JOIN tables tb ON tb.id = ta.table_id
   WHERE ta.ticket_id = ?
 ");
-$stmt->execute([(int)$ticket['ticket_id']]);
+$stmt->execute([(int) $ticket['ticket_id']]);
 $current = $stmt->fetch() ?: null;
 
 // Available tables: remaining = capacity - count(assignments)
@@ -36,6 +36,8 @@ $stmt = $pdo->query("
     tb.id,
     tb.label,
     tb.capacity,
+    tb.position_x,
+    tb.position_y,
     (tb.capacity - COALESCE(used.used_count, 0)) AS remaining
   FROM tables tb
   LEFT JOIN (
@@ -44,7 +46,6 @@ $stmt = $pdo->query("
     GROUP BY table_id
   ) used ON used.table_id = tb.id
   WHERE tb.is_active = 1
-    AND (tb.capacity - COALESCE(used.used_count, 0)) >= 1
   ORDER BY tb.label
 ");
 $available = $stmt->fetchAll();
@@ -52,17 +53,19 @@ $available = $stmt->fetchAll();
 json_response([
   'ticket' => [
     'code' => $ticket['code'],
-    'ticket_id' => (int)$ticket['ticket_id'],
+    'ticket_id' => (int) $ticket['ticket_id'],
     'current_table' => $current ? [
-      'table_id' => (int)$current['table_id'],
+      'table_id' => (int) $current['table_id'],
       'label' => $current['label'],
-      'capacity' => (int)$current['capacity'],
+      'capacity' => (int) $current['capacity'],
     ] : null,
   ],
   'available_tables' => array_map(fn($t) => [
-    'id' => (int)$t['id'],
+    'id' => (int) $t['id'],
     'label' => $t['label'],
-    'capacity' => (int)$t['capacity'],
-    'remaining' => (int)$t['remaining'],
+    'capacity' => (int) $t['capacity'],
+    'remaining' => (int) $t['remaining'],
+    'position_x' => (float) $t['position_x'],
+    'position_y' => (float) $t['position_y'],
   ], $available),
 ]);
