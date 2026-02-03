@@ -38,6 +38,7 @@ $stmt = $pdo->query("
     tb.capacity,
     tb.position_x,
     tb.position_y,
+    tb.floor,
     (tb.capacity - COALESCE(used.used_count, 0)) AS remaining
   FROM tables tb
   LEFT JOIN (
@@ -67,5 +68,6 @@ json_response([
     'remaining' => (int) $t['remaining'],
     'position_x' => (float) $t['position_x'],
     'position_y' => (float) $t['position_y'],
+    'floor' => (int) ($t['floor'] ?? 1),
   ], $available),
 ]);

@@ -109,6 +109,26 @@ button,
   background: var(--red);
 }
 
+button.outline,
+.btn.outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  box-shadow: none;
+}
+
+button.outline:hover,
+.btn.outline:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: #eff6ff;
+}
+
+.row.align-start {
+  align-items: flex-start;
+}
+
+
 .muted {
   color: var(--muted);
   margin: 6px 0 0;

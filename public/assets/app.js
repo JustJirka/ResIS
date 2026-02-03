@@ -47,6 +47,9 @@ async function releaseTable() {
     load();
 }
 
+
+let currentFloor = 1;
+
 function render(data) {
     const app = document.getElementById("app");
     app.innerHTML = "";
@@ -77,20 +80,62 @@ function render(data) {
     app.appendChild(info);
 
     // 2. Map View
+    const mapSection = document.createElement("div");
+    mapSection.className = "row align-start";
+    mapSection.style.marginTop = "24px";
+    mapSection.style.gap = "20px";
+
+    // Controls Side
+    const controls = document.createElement("div");
+    controls.style.minWidth = "150px";
+
     const mapTitle = document.createElement("h3");
     mapTitle.textContent = "Floor Plan";
-    mapTitle.style.marginTop = "24px";
-    app.appendChild(mapTitle);
+    mapTitle.style.marginBottom = "10px";
+    controls.appendChild(mapTitle);
 
+    const floorLabel = document.createElement("p");
+    floorLabel.className = "muted";
+    floorLabel.textContent = "Select floor:";
+    controls.appendChild(floorLabel);
+
+    const btnGroup = document.createElement("div");
+    btnGroup.className = "stack";
+    btnGroup.style.gap = "8px";
+
+    [1, 2].forEach(f => {
+        const btn = document.createElement("button");
+        btn.textContent = f === 1 ? "Ground Floor" : "1st Floor";
+        // Simple styling toggle
+        if (currentFloor === f) {
+            btn.style.backgroundColor = "var(--primary, #333)";
+            btn.style.color = "#fff";
+        } else {
+            btn.className = "outline";
+            btn.onclick = () => {
+                currentFloor = f;
+                render(data);
+            };
+        }
+        btn.style.width = "100%";
+        btnGroup.appendChild(btn);
+    });
+    controls.appendChild(btnGroup);
+    mapSection.appendChild(controls);
+
+    // Map Container
     const mapContainer = document.createElement("div");
     mapContainer.className = "map-container";
+    mapContainer.style.flex = "1";
 
     const img = document.createElement("img");
-    img.src = "public/assets/patro1.png";
-    img.alt = "Floor Plan";
+    img.src = `public/assets/patro${currentFloor}.png`;
+    img.alt = `Floor Plan ${currentFloor}`;
     mapContainer.appendChild(img);
 
     tables.forEach((t) => {
+        if (t.floor !== currentFloor) return;
+
         // Determine status
         const isCurrent = ticket.current_table && ticket.current_table.table_id === t.id;
         const isFull = t.remaining < 1;
@@ -114,7 +159,10 @@ function render(data) {
 
         mapContainer.appendChild(dot);
     });
-    app.appendChild(mapContainer);
+    mapSection.appendChild(mapContainer);
+
+    app.appendChild(mapSection);
+
 
     // 3. List view
     const listTitle = document.createElement("h3");
