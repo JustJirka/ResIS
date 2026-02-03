@@ -128,6 +128,13 @@
                 <label>Capacity:</label>
                 <input type="number" id="capacity" value="4">
             </div>
+            <div class="row">
+                <label>Type:</label>
+                <select id="type">
+                    <option value="seating">Seating</option>
+                    <option value="standing">Standing</option>
+                </select>
+            </div>
 
             <button onclick="generateSQL()">Generate SQL</button>
             <textarea id="output" readonly></textarea>
@@ -176,6 +183,7 @@
         function addTable(x, y) {
             const label = nextLabelInput.value;
             const capacity = parseInt(capacityInput.value, 10);
+            const type = document.getElementById('type').value;
 
             const table = {
                 id: Date.now(),
@@ -183,7 +191,8 @@
                 x: x.toFixed(2),
                 y: y.toFixed(2),
                 capacity: capacity,
-                floor: currentFloor
+                floor: currentFloor,
+                type: type
             };
 
             tables.push(table);
@@ -195,17 +204,17 @@
         }
 
         function drawMarker(t) {
-            // Only draw if on correct floor? Or draw all but dim? 
-            // For editing simplicity, let's only draw current floor markers or create opacity.
-            // But user asked to "add tables to the image". We should probably visualize carefully.
-            // Let's just create them. We can filter visibility via css/js easily if needed.
-
             const el = document.createElement('div');
             el.className = 'marker';
             el.textContent = t.label;
             el.style.left = t.x + '%';
             el.style.top = t.y + '%';
-            el.title = `Floor ${t.floor}, Cap ${t.capacity}`;
+            el.title = `Floor ${t.floor}, Cap ${t.capacity}, ${t.type}`;
+
+            if (t.type === 'standing') {
+                el.style.borderRadius = '4px'; // Square
+                el.style.backgroundColor = 'rgba(220, 38, 38, 0.8)';
+            }
 
             // Visual feedback if checking other floor
             if (t.floor !== currentFloor) {
@@ -242,9 +251,10 @@
         };
 
         function generateSQL() {
-            let sql = "INSERT INTO tables (label, position_x, position_y, capacity, floor) VALUES\n";
+            let sql = "INSERT INTO tables (label, position_x, position_y, capacity, floor, type) VALUES\n";
             const rows = tables.map(t => {
-                return `('${t.label}', ${t.x}, ${t.y}, ${t.capacity}, ${t.floor})`;
+                const typeVal = t.type || 'seating';
+                return `('${t.label}', ${t.x}, ${t.y}, ${t.capacity}, ${t.floor}, '${typeVal}')`;
             });
 
             if (rows.length === 0) {

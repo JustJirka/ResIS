@@ -12,7 +12,7 @@ if (!is_valid_code($code)) {
 $pdo = db();
 
 // Ticket info
-$stmt = $pdo->prepare("SELECT id AS ticket_id, code FROM tickets WHERE code = ?");
+$stmt = $pdo->prepare("SELECT id AS ticket_id, code, type FROM tickets WHERE code = ?");
 $stmt->execute([$code]);
 $ticket = $stmt->fetch();
 
@@ -39,6 +39,7 @@ $stmt = $pdo->query("
     tb.position_x,
     tb.position_y,
     tb.floor,
+    tb.type,
     (tb.capacity - COALESCE(used.used_count, 0)) AS remaining
   FROM tables tb
   LEFT JOIN (
@@ -55,6 +56,7 @@ json_response([
   'ticket' => [
     'code' => $ticket['code'],
     'ticket_id' => (int) $ticket['ticket_id'],
+    'type' => $ticket['type'] ?? 'seating',
     'current_table' => $current ? [
       'table_id' => (int) $current['table_id'],
       'label' => $current['label'],
@@ -69,5 +71,6 @@ json_response([
     'position_x' => (float) $t['position_x'],
     'position_y' => (float) $t['position_y'],
     'floor' => (int) ($t['floor'] ?? 1),
+    'type' => $t['type'] ?? 'seating',
   ], $available),
 ]);

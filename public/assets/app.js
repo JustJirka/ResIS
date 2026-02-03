@@ -70,6 +70,7 @@ function render(data) {
         <div>
             <h2>Reservation ${ticket.code}</h2>
             <div class="kv">Current Table: ${currentHtml}</div>
+            <div class="kv">Ticket Type: <strong>${ticket.type || 'seating'}</strong></div>
         </div>
         ${ticket.current_table
             ? `<button onclick="releaseTable()" class="danger">Release</button>`
@@ -129,14 +130,9 @@ function render(data) {
     mapContainer.style.flex = "1";
 
     // Layer 1: Ground Floor (Always loaded, visibility depends on mode)
-    // If selected is F1: Opacity 1
-    // If selected is F2: Opacity 1 (visible through transparency)
     const layer1 = document.createElement("img");
     layer1.src = "public/assets/patro1.png";
-    layer1.className = `map-layer ${currentFloor === 1 ? 'active' : 'active'}`; // Always active in background essentially?
-    // Wait, if I am on floor 1, I just see floor 1.
-    // If I am on floor 2, I see floor 2 overlaid on floor 1.
-    // So Layer 1 is correct.
+    layer1.className = `map-layer ${currentFloor === 1 ? 'active' : 'active'}`;
     mapContainer.appendChild(layer1);
 
     // Layer 2: 1st Floor
@@ -148,6 +144,11 @@ function render(data) {
     tables.forEach((t) => {
         // Only interactive elements for CURRENT floor
         if (t.floor !== currentFloor) return;
+
+        // Filter by Type logic
+        const ticketType = ticket.type || 'seating';
+        const tableType = t.type || 'seating';
+        if (tableType !== ticketType) return;
 
         // Determine status
         const isCurrent = ticket.current_table && ticket.current_table.table_id === t.id;
@@ -162,7 +163,7 @@ function render(data) {
 
         // Map Table Container
         const dot = document.createElement("div");
-        dot.className = `map-table ${statusClass}`;
+        dot.className = `map-table ${statusClass} type-${tableType}`;
         dot.style.left = t.position_x + "%";
         dot.style.top = t.position_y + "%";
 
@@ -172,38 +173,31 @@ function render(data) {
         center.textContent = t.label;
         dot.appendChild(center);
 
-        // Chairs
-        const radius = 24; // distance from center
-        const startAngle = -90; // start at top
-        const angleStep = 360 / t.capacity;
+        // Chairs - ONLY for seating tables
+        if (tableType === 'seating') {
+            const radius = 24; // distance from center
+            const startAngle = -90; // start at top
+            const angleStep = 360 / t.capacity;
 
-        // We know 'remaining' free seats.
-        // We assume filled seats are first (or last). Let's say first N are occupied.
-        // Occupied count = capacity - remaining
-        const occupiedCount = t.capacity - t.remaining;
+            const occupiedCount = t.capacity - t.remaining;
 
-        for (let i = 0; i < t.capacity; i++) {
-            const angleDeg = startAngle + (i * angleStep);
-            const angleRad = angleDeg * (Math.PI / 180);
+            for (let i = 0; i < t.capacity; i++) {
+                const angleDeg = startAngle + (i * angleStep);
+                const angleRad = angleDeg * (Math.PI / 180);
 
-            const cx = Math.cos(angleRad) * radius;
-            const cy = Math.sin(angleRad) * radius;
+                const cx = Math.cos(angleRad) * radius;
+                const cy = Math.sin(angleRad) * radius;
 
-            const chair = document.createElement("div");
-            // If isCurrent, we might want to show which are OURS? 
-            // But API doesn't say which specific seats are ours, just that we have the table.
-            // For now:
-            // i < occupiedCount => occupied (Red)
-            // i >= occupiedCount => free (Blue)
-            // UNLESS it is fully free (isEmpty) -> all blue
-            // UNLESS it is fully full (isFull) -> all red
+                const chair = document.createElement("div");
+                const isChairOccupied = i < occupiedCount;
+                chair.className = `chair ${isChairOccupied ? 'occupied' : 'free'}`;
 
-            const isChairOccupied = i < occupiedCount;
-            chair.className = `chair ${isChairOccupied ? 'occupied' : 'free'}`;
+                chair.style.transform = `translate(${cx}px, ${cy}px)`;
 
-            chair.style.transform = `translate(${cx}px, ${cy}px)`;
-
-            dot.appendChild(chair);
+                dot.appendChild(chair);
+            }
+        } else {
+            dot.classList.add('standing-table');
         }
 
         if (isCurrent) {
@@ -211,7 +205,11 @@ function render(data) {
         } else if (isFull) {
             dot.title = "Occupied";
         } else {
-            dot.onclick = () => assignTable(t.id);
+            dot.onclick = () => {
+                if (confirm(`Assign to table ${t.label}?`)) {
+                    assignTable(t.id);
+                }
+            };
             dot.title = `Select ${t.label} (Remaining: ${t.remaining})`;
         }
 
