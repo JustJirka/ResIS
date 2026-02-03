@@ -128,25 +128,83 @@ function render(data) {
     mapContainer.className = "map-container";
     mapContainer.style.flex = "1";
 
-    const img = document.createElement("img");
-    img.src = `public/assets/patro${currentFloor}.png`;
-    img.alt = `Floor Plan ${currentFloor}`;
-    mapContainer.appendChild(img);
+    // Layer 1: Ground Floor (Always loaded, visibility depends on mode)
+    // If selected is F1: Opacity 1
+    // If selected is F2: Opacity 1 (visible through transparency)
+    const layer1 = document.createElement("img");
+    layer1.src = "public/assets/patro1.png";
+    layer1.className = `map-layer ${currentFloor === 1 ? 'active' : 'active'}`; // Always active in background essentially?
+    // Wait, if I am on floor 1, I just see floor 1.
+    // If I am on floor 2, I see floor 2 overlaid on floor 1.
+    // So Layer 1 is correct.
+    mapContainer.appendChild(layer1);
+
+    // Layer 2: 1st Floor
+    const layer2 = document.createElement("img");
+    layer2.src = "public/assets/patro2.png";
+    layer2.className = `map-layer ${currentFloor === 2 ? 'active' : 'hidden'}`;
+    mapContainer.appendChild(layer2);
 
     tables.forEach((t) => {
+        // Only interactive elements for CURRENT floor
         if (t.floor !== currentFloor) return;
 
         // Determine status
         const isCurrent = ticket.current_table && ticket.current_table.table_id === t.id;
         const isFull = t.remaining < 1;
+        const isPartial = t.remaining < t.capacity && t.remaining > 0;
+        const isEmpty = t.remaining === t.capacity;
 
-        // Map Dot
+        let statusClass = "status-empty";
+        if (isCurrent) statusClass = "status-current";
+        else if (isFull) statusClass = "status-full";
+        else if (isPartial) statusClass = "status-partial";
+
+        // Map Table Container
         const dot = document.createElement("div");
-        dot.className = `map-table ${isCurrent ? 'current' : ''} ${isFull && !isCurrent ? 'full' : ''}`;
-        dot.textContent = t.label;
-
+        dot.className = `map-table ${statusClass}`;
         dot.style.left = t.position_x + "%";
         dot.style.top = t.position_y + "%";
+
+        // Center Label
+        const center = document.createElement("div");
+        center.className = "table-center";
+        center.textContent = t.label;
+        dot.appendChild(center);
+
+        // Chairs
+        const radius = 24; // distance from center
+        const startAngle = -90; // start at top
+        const angleStep = 360 / t.capacity;
+
+        // We know 'remaining' free seats.
+        // We assume filled seats are first (or last). Let's say first N are occupied.
+        // Occupied count = capacity - remaining
+        const occupiedCount = t.capacity - t.remaining;
+
+        for (let i = 0; i < t.capacity; i++) {
+            const angleDeg = startAngle + (i * angleStep);
+            const angleRad = angleDeg * (Math.PI / 180);
+
+            const cx = Math.cos(angleRad) * radius;
+            const cy = Math.sin(angleRad) * radius;
+
+            const chair = document.createElement("div");
+            // If isCurrent, we might want to show which are OURS? 
+            // But API doesn't say which specific seats are ours, just that we have the table.
+            // For now:
+            // i < occupiedCount => occupied (Red)
+            // i >= occupiedCount => free (Blue)
+            // UNLESS it is fully free (isEmpty) -> all blue
+            // UNLESS it is fully full (isFull) -> all red
+
+            const isChairOccupied = i < occupiedCount;
+            chair.className = `chair ${isChairOccupied ? 'occupied' : 'free'}`;
+
+            chair.style.transform = `translate(${cx}px, ${cy}px)`;
+
+            dot.appendChild(chair);
+        }
 
         if (isCurrent) {
             dot.title = "Your Table";

@@ -204,34 +204,49 @@ button.outline:hover,
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--border);
-  background: #fff;
+  background: white;
 }
 
-.map-container img {
+.map-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: auto;
   display: block;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* The first image (Ground Floor) sets the container height */
+.map-layer:first-of-type {
+  position: relative;
+}
+
+.map-layer.active {
+  opacity: 1;
+}
+
+.map-layer.dimmed {
+  opacity: 0.4;
+}
+
+.map-layer.hidden {
+  opacity: 0;
 }
 
 .map-table {
   position: absolute;
-  width: 50px;
-  height: 50px;
+  width: 60px;
+  height: 60px;
   transform: translate(-50%, -50%);
-  /* center on coords */
-  background: var(--blue);
-  color: white;
-  border-radius: 50%;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  font-size: 14px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
   cursor: pointer;
-  transition: transform 0.2s, background 0.2s;
-  border: 2px solid white;
-  z-index: 10;
+  transition: transform 0.2s;
 }
 
 .map-table:hover {
@@ -239,13 +254,62 @@ button.outline:hover,
   z-index: 20;
 }
 
-.map-table.full {
-  background: var(--muted);
-  cursor: not-allowed;
-  opacity: 0.8;
+/* The central table circle */
+.table-center {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  /* Default gray/blueish */
+  border: 2px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 13px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 2;
 }
 
-.map-table.current {
+/* Status colors for the table center */
+.map-table.status-empty .table-center {
+  background: var(--blue);
+  color: white;
+}
+
+.map-table.status-partial .table-center {
+  background: #f59e0b;
+  /* Yellow/Orange */
+  color: white;
+}
+
+.map-table.status-full .table-center {
+  background: var(--red);
+  color: white;
+}
+
+.map-table.status-current .table-center {
   background: var(--green);
   box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.3);
+  color: white;
+}
+
+/* Chairs */
+.chair {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+}
+
+.chair.free {
+  background: var(--blue);
+}
+
+.chair.occupied {
+  background: var(--red);
 }
