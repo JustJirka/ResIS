@@ -313,3 +313,22 @@ button.outline:hover,
 .chair.occupied {
   background: var(--red);
 }
+
+.map-table.standing-table .table-center {
+  border-radius: 4px;
+  /* Square */
+  width: 40px;
+  height: 40px;
+  background: #f3f4f6;
+  border: 2px solid #6b7280;
+}
+
+/* If standing table is selected/etc, override */
+.map-table.standing-table.status-current .table-center {
+  background: var(--green);
+  border-color: white;
+}
+
+.map-table.standing-table.status-full .table-center {
+  background: var(--red);
+}
