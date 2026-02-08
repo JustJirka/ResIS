@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table Layout Creator</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            padding: 20px;
+            background: #f0f2f5;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+
+        .editor {
+            position: relative;
+            width: 800px;
+            border: 1px solid #ccc;
+            background: white;
+            user-select: none;
+        }
+
+        .editor img {
+            width: 100%;
+            display: block;
+            pointer-events: none;
+        }
+
+        .controls {
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: sticky;
+            top: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            font-family: monospace;
+            white-space: pre;
+        }
+
+        .marker {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: rgba(37, 99, 235, 0.8);
+            border: 2px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .marker:hover {
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        button {
+            padding: 8px 16px;
+            cursor: pointer;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        button.secondary {
+            background: #6b7280;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        input[type=number] {
+            padding: 5px;
+            width: 60px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Table Layout Creator</h1>
+    <p>Click on the map to add a table. Click a marker to remove it.</p>
+
+    <div class="container">
+        <div class="editor" id="editor">
+            <!-- Layers -->
+            <img src="public/assets/patro1.png" id="layer1" style="position: relative; z-index: 1;">
+            <img src="public/assets/patro2.png" id="layer2"
+                style="position: absolute; top:0; left:0; width:100%; z-index: 2; display: none;">
+
+            <!-- Markers Container -->
+            <div id="markers" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 10;"></div>
+        </div>
+
+        <div class="controls">
+            <div class="row">
+                <button onclick="setFloor(1)" id="btnF1" style="background:#1e40af">Floor 1</button>
+                <button onclick="setFloor(2)" id="btnF2" class="secondary">Floor 2</button>
+            </div>
+
+            <div class="row">
+                <label>Next Label:</label>
+                <input type="text" id="nextLabel" value="T1">
+            </div>
+            <div class="row">
+                <label>Capacity:</label>
+                <input type="number" id="capacity" value="4">
+            </div>
+            <div class="row">
+                <label>Type:</label>
+                <select id="type">
+                    <option value="seating">Seating</option>
+                    <option value="standing">Standing</option>
+                </select>
+            </div>
+
+            <button onclick="generateSQL()">Generate SQL</button>
+            <textarea id="output" readonly></textarea>
+            <button class="secondary" onclick="clearTables()">Clear All</button>
+        </div>
+    </div>
+
+    <script>
+        let currentFloor = 1;
+        let tables = [];
+
+        const editor = document.getElementById('editor');
+        const markersDiv = document.getElementById('markers');
+        const nextLabelInput = document.getElementById('nextLabel');
+        const capacityInput = document.getElementById('capacity');
+        const layer1 = document.getElementById('layer1');
+        const layer2 = document.getElementById('layer2');
+
+        function setFloor(f) {
+            currentFloor = f;
+            if (f === 1) {
+                layer2.style.display = 'none';
+                document.getElementById('btnF1').style.background = '#1e40af';
+                document.getElementById('btnF2').style.background = '#6b7280';
+            } else {
+                layer2.style.display = 'block';
+                document.getElementById('btnF2').style.background = '#1e40af';
+                document.getElementById('btnF1').style.background = '#6b7280';
+            }
+        }
+
+        markersDiv.addEventListener('click', (e) => {
+            if (e.target !== markersDiv) return; // Clicked on existing marker?
+
+            const rect = markersDiv.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Convert to percentage
+            const pctX = (x / rect.width) * 100;
+            const pctY = (y / rect.height) * 100;
+
+            addTable(pctX, pctY);
+        });
+
+        function addTable(x, y) {
+            const label = nextLabelInput.value;
+            const capacity = parseInt(capacityInput.value, 10);
+            const type = document.getElementById('type').value;
+
+            const table = {
+                id: Date.now(),
+                label: label,
+                x: x.toFixed(2),
+                y: y.toFixed(2),
+                capacity: capacity,
+                floor: currentFloor,
+                type: type
+            };
+
+            tables.push(table);
+            drawMarker(table);
+
+            // Auto increment label
+            nextLabelInput.value = autoIncrementLabel(label);
+            generateSQL();
+        }
+
+        function drawMarker(t) {
+            const el = document.createElement('div');
+            el.className = 'marker';
+            el.textContent = t.label;
+            el.style.left = t.x + '%';
+            el.style.top = t.y + '%';
+            el.title = `Floor ${t.floor}, Cap ${t.capacity}, ${t.type}`;
+
+            if (t.type === 'standing') {
+                el.style.borderRadius = '4px'; // Square
+                el.style.backgroundColor = 'rgba(220, 38, 38, 0.8)';
+            }
+
+            // Visual feedback if checking other floor
+            if (t.floor !== currentFloor) {
+                el.style.opacity = '0.3';
+                el.style.background = '#999';
+            }
+
+            el.onclick = (e) => {
+                e.stopPropagation();
+                removeTable(t.id);
+            };
+
+            el._tableId = t.id;
+            markersDiv.appendChild(el);
+        }
+
+        function removeTable(id) {
+            if (!confirm("Remove this table?")) return;
+            tables = tables.filter(t => t.id !== id);
+            refreshMarkers();
+            generateSQL();
+        }
+
+        function refreshMarkers() {
+            markersDiv.innerHTML = '';
+            tables.forEach(drawMarker);
+        }
+
+        // Re-draw when switching floor to update opacity
+        const _origSetFloor = setFloor;
+        setFloor = function (f) {
+            _origSetFloor(f);
+            refreshMarkers();
+        };
+
+        function generateSQL() {
+            let sql = "INSERT INTO tables (label, position_x, position_y, capacity, floor, type) VALUES\n";
+            const rows = tables.map(t => {
+                const typeVal = t.type || 'seating';
+                return `('${t.label}', ${t.x}, ${t.y}, ${t.capacity}, ${t.floor}, '${typeVal}')`;
+            });
+
+            if (rows.length === 0) {
+                document.getElementById('output').value = "-- Add tables to generate SQL";
+                return;
+            }
+
+            sql += rows.join(",\n") + ";";
+            document.getElementById('output').value = sql;
+        }
+
+        function clearTables() {
+            if (confirm("Clear all tables?")) {
+                tables = [];
+                refreshMarkers();
+                generateSQL();
+            }
+        }
+
+        function autoIncrementLabel(str) {
+            // simple regex to find trailing number
+            const match = str.match(/^(.*?)(\d+)$/);
+            if (match) {
+                const prefix = match[1];
+                const num = parseInt(match[2], 10) + 1;
+                return prefix + num;
+            }
+            return str + "_1";
+        }
+    </script>
+</body>
+
+</html>

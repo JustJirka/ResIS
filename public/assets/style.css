@@ -6,9 +6,13 @@
   --border: #e5e7eb;
   --blue: #2563eb;
   --red: #dc2626;
+  --green: #10b981;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
@@ -22,24 +26,51 @@ body {
   padding: 28px 16px 60px;
 }
 
-h1 { margin: 0 0 10px; font-size: 40px; }
-h2 { margin: 0 0 10px; font-size: 20px; }
-h3 { margin: 0 0 6px; font-size: 18px; }
+h1 {
+  margin: 0 0 10px;
+  font-size: 40px;
+}
+
+h2 {
+  margin: 0 0 10px;
+  font-size: 20px;
+}
+
+h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
 
 .card {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.04);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
 }
 
-.stack { display: grid; gap: 14px; }
+.stack {
+  display: grid;
+  gap: 14px;
+}
 
-.row { display: flex; gap: 12px; align-items: center; }
-.row.space { justify-content: space-between; align-items: flex-start; }
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
 
-label { display: block; font-weight: 600; margin-bottom: 6px; }
+.row.space {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
 input {
   width: 100%;
   padding: 12px 12px;
@@ -48,9 +79,14 @@ input {
   border: 1px solid var(--border);
   outline: none;
 }
-input:focus { border-color: #c7d2fe; box-shadow: 0 0 0 4px rgba(37,99,235,0.12); }
 
-button, .btn {
+input:focus {
+  border-color: #c7d2fe;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+button,
+.btn {
   border: none;
   border-radius: 10px;
   padding: 10px 14px;
@@ -60,20 +96,71 @@ button, .btn {
   color: white;
   font-weight: 600;
 }
-.btn { display: inline-flex; justify-content: center; align-items: center; width: 100%; }
-.btn.danger, .danger button { background: var(--red); }
 
-.muted { color: var(--muted); margin: 6px 0 0; }
-.kv { margin: 6px 0; }
-.hint { margin-top: 10px; color: var(--muted); font-size: 14px; }
+.btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.btn.danger,
+.danger button {
+  background: var(--red);
+}
+
+button.outline,
+.btn.outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  box-shadow: none;
+}
+
+button.outline:hover,
+.btn.outline:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: #eff6ff;
+}
+
+.row.align-start {
+  align-items: flex-start;
+}
+
+
+.muted {
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+
+.kv {
+  margin: 6px 0;
+}
+
+.hint {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 14px;
+}
 
 .grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
-@media (max-width: 900px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 .topbar {
   display: flex;
@@ -88,7 +175,10 @@ button, .btn {
   text-decoration: none;
   font-weight: 600;
 }
-.link:hover { text-decoration: underline; }
+
+.link:hover {
+  text-decoration: underline;
+}
 
 .skeleton {
   border-radius: 10px;
@@ -96,7 +186,149 @@ button, .btn {
   background-size: 200% 100%;
   animation: shimmer 1.2s infinite;
 }
+
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* MAP STYLES */
+.map-container {
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: white;
+}
+
+.map-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+  display: block;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* The first image (Ground Floor) sets the container height */
+.map-layer:first-of-type {
+  position: relative;
+}
+
+.map-layer.active {
+  opacity: 1;
+}
+
+.map-layer.dimmed {
+  opacity: 0.4;
+}
+
+.map-layer.hidden {
+  opacity: 0;
+}
+
+.map-table {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.map-table:hover {
+  transform: translate(-50%, -50%) scale(1.1);
+  z-index: 20;
+}
+
+/* The central table circle */
+.table-center {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  /* Default gray/blueish */
+  border: 2px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 13px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 2;
+}
+
+/* Status colors for the table center */
+.map-table.status-empty .table-center {
+  background: var(--blue);
+  color: white;
+}
+
+.map-table.status-partial .table-center {
+  background: #f59e0b;
+  /* Yellow/Orange */
+  color: white;
+}
+
+.map-table.status-full .table-center {
+  background: var(--red);
+  color: white;
+}
+
+.map-table.status-current .table-center {
+  background: var(--green);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.3);
+  color: white;
+}
+
+/* Chairs */
+.chair {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+}
+
+.chair.free {
+  background: var(--blue);
+}
+
+.chair.occupied {
+  background: var(--red);
+}
+
+.map-table.standing-table .table-center {
+  border-radius: 4px;
+  /* Square */
+  width: 40px;
+  height: 40px;
+  background: #f3f4f6;
+  border: 2px solid #6b7280;
+}
+
+/* If standing table is selected/etc, override */
+.map-table.standing-table.status-current .table-center {
+  background: var(--green);
+  border-color: white;
+}
+
+.map-table.standing-table.status-full .table-center {
+  background: var(--red);
 }
